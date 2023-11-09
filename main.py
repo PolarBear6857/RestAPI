@@ -80,10 +80,10 @@ def partial_update_blog_post(blog_id):
 
     data = request.get_json()
 
-    if 'author' in data:
+    if 'author' in data and data['author']:
         post.author = data['author']
 
-    if 'content' in data:
+    if 'content' in data and data['content']:
         post.content = data['content']
 
     db.session.commit()
