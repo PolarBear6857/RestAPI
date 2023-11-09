@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 20px;
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        #blogPosts {
+            flex: 1 1 60%;
+            margin-right: 20px;
+        }
+
+        #formsColumn {
+            flex: 1 1 30%;
+        }
+
+        .post {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            resize: none;
+        }
+
+        button {
+            background-color: #4caf50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                flex-direction: column;
+            }
+
+            #formsColumn {
+                width: 100%;
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+<div id="blogPosts"></div>
+
+<div id="formsColumn">
+    <h2>Create New Blog Post</h2>
+    <form id="createPostForm">
+        <label for="author">Author:</label>
+        <input type="text" id="author" required><br>
+
+        <label for="content">Content:</label>
+        <textarea id="content" required></textarea><br>
+
+        <button type="submit">Create Post</button>
+    </form>
+
+    <h2>Update Blog Post</h2>
+    <form id="updatePostForm">
+        <label for="updateId">Post ID:</label>
+        <input type="text" id="updateId" required><br>
+
+        <label for="newAuthor">New Author:</label>
+        <input type="text" id="newAuthor"><br>
+
+        <label for="newContent">New Content:</label>
+        <textarea id="newContent"></textarea><br>
+
+        <button type="submit">Update Post</button>
+    </form>
+</div>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Načtení všech blog postů při načtení stránky
+        fetch('/api/blog')
+            .then(response => response.json())
+            .then(data => displayBlogPosts(data.posts));
+
+        // Odeslání formuláře pro vytvoření nového blog postu
+        document.getElementById('createPostForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+            const author = document.getElementById('author').value;
+            const content = document.getElementById('content').value;
+
+            fetch('/api/blog', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    author: author,
+                    content: content,
+                }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    alert('Blog post created with ID: ' + data.id);
+                    location.reload();
+                });
+        });
+
+        // Odeslání formuláře pro částečný update blog postu
+        document.getElementById('updatePostForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+            const postId = document.getElementById('updateId').value;
+            const newAuthor = document.getElementById('newAuthor').value;
+            const newContent = document.getElementById('newContent').value;
+
+            fetch(`/api/blog/${postId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    author: newAuthor,
+                    content: newContent,
+                }),
+            })
+                .then(response => {
+                    if (response.ok) {
+                        alert('Blog post updated successfully');
+                        location.reload();
+                    } else {
+                        alert('Error updating blog post');
+                    }
+                });
+        });
+    });
+
+    // Funkce pro zobrazení blog postů na stránce
+    function displayBlogPosts(posts) {
+        const blogPostsContainer = document.getElementById('blogPosts');
+        if (posts.length === 0) {
+            const emptyPostParagraph = document.createElement('p')
+            emptyPostParagraph.innerHTML = "(Blog neobsahuje žádné příspěvky)"
+            blogPostsContainer.appendChild(emptyPostParagraph)
+        } else {
+            for (const post of posts) {
+                const postDiv = document.createElement('div');
+                postDiv.innerHTML = `
+                    <h3>Author: ${post.author}</h3>
+                    <p>Content: ${post.content}</p>
+                    <p>Date: ${post.created_at}</p>
+                    <p style="font-size: x-small">id: ${post.id}</p>
+                    <button onclick="deletePost(${post.id})">Delete</button>
+                `;
+                postDiv.style.border = "3px solid black"
+                postDiv.style.margin = "5px"
+                postDiv.style.padding = "10px"
+                postDiv.style.borderRadius = "10px"
+                blogPostsContainer.appendChild(postDiv);
+            }
+        }
+    }
+
+    // Funkce pro smazání blog postu
+    function deletePost(postId) {
+        fetch(`/api/blog/${postId}`, {
+            method: 'DELETE',
+        })
+            .then(response => {
+                if (response.ok) {
+                    alert('Blog post deleted successfully');
+                    location.reload();
+                } else {
+                    alert('Error deleting blog post');
+                }
+            });
+    }
+</script>
+</body>
+</html>
