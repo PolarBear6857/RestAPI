@@ -132,6 +132,17 @@ def logout_user():
     session.pop('user_id', None)
     return jsonify({'message': 'Logout successful'})
 
+
+"""
+    id = db.Column(db.Integer, primary_key=True)
+    author = db.Column(db.String(50), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user = db.relationship('User', backref=db.backref('blog_posts', lazy=True))
+"""
+
+
 @app.route('/api/blog', methods=['POST'])
 def create_blog_post():
     try:
