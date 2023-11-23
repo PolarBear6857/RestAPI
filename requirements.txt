@@ -1,4 +1,4 @@
-Flask~=3.0.0
+Flask
 gunicorn
 flask_sqlalchemy
-werkzeug~=3.0.1
+werkzeug
