@@ -74,34 +74,73 @@
 
 <div id="formsColumn">
     <h2>Create New Blog Post</h2>
-    <form id="createPostForm">
-        <label for="author">Author:</label>
-        <input type="text" id="author" required><br>
-
+    <form id="createPostForm" style="display:none">
         <label for="content">Content:</label>
         <textarea id="content" required></textarea><br>
 
-        <button type="submit">Create Post</button>
+        <button type="submit" onclick="createPost()">Create Post</button>
     </form>
 
     <h2>Update Blog Post</h2>
-    <form id="updatePostForm">
+    <form id="updatePostForm" style="display:none">
         <label for="updateId">Post ID:</label>
         <input type="text" id="updateId" required><br>
-
-        <label for="newAuthor">New Author:</label>
-        <input type="text" id="newAuthor"><br>
 
         <label for="newContent">New Content:</label>
         <textarea id="newContent"></textarea><br>
 
-        <button type="submit">Update Post</button>
+        <button type="submit" onclick="updatePost()">Update Post</button>
     </form>
+    <!-- Add these forms in your HTML -->
+    <form id="registerForm">
+        <label for="regUsername">Username:</label>
+        <input type="text" id="regUsername" required><br>
+
+        <label for="regPassword">Password:</label>
+        <input type="password" id="regPassword" required><br>
+
+        <button type="button" onclick="register()">Register</button>
+    </form>
+
+    <!-- Add this paragraph to display currently logged-in user -->
+    <p id="loggedInUser"></p>
+
+    <!-- Modify the login form to disable if already logged in -->
+    <form id="loginForm">
+        <label for="username">Username:</label>
+        <input type="text" id="username" required><br>
+
+        <label for="password">Password:</label>
+        <input type="password" id="password" required><br>
+
+        <button type="button" onclick="login()" id="loginButton">Login</button>
+    </form>
+
+    <!-- Add a link to logout -->
+    <a href="#" onclick="logout()" id="logoutLink" style="display:none">Logout</a>
 </div>
 
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        // Check if a user is already logged in
+        fetch('/api/check_login')
+            .then(response => response.json())
+            .then(data => {
+                if (data.user_id) {
+                    document.getElementById('loggedInUser').innerText = 'Logged in as: ' + data.username;
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('logoutLink').style.display = 'inline';
+                    document.getElementById('createPostForm').style.display = 'block';
+                    document.getElementById('updatePostForm').style.display = 'block';
+                } else {
+                    document.getElementById('loginForm').style.display = 'block';
+                    document.getElementById('logoutLink').style.display = 'none';
+                    document.getElementById('createPostForm').style.display = 'none';
+                    document.getElementById('updatePostForm').style.display = 'none';
+                }
+            });
+
         // Načtení všech blog postů při načtení stránky
         fetch('/api/blog')
             .then(response => response.json())
@@ -110,7 +149,6 @@
         // Odeslání formuláře pro vytvoření nového blog postu
         document.getElementById('createPostForm').addEventListener('submit', function (event) {
             event.preventDefault();
-            const author = document.getElementById('author').value;
             const content = document.getElementById('content').value;
 
             fetch('/api/blog', {
@@ -119,7 +157,6 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    author: author,
                     content: content,
                 }),
             })
@@ -134,7 +171,6 @@
         document.getElementById('updatePostForm').addEventListener('submit', function (event) {
             event.preventDefault();
             const postId = document.getElementById('updateId').value;
-            const newAuthor = document.getElementById('newAuthor').value;
             const newContent = document.getElementById('newContent').value;
 
             fetch(`/api/blog/${postId}`, {
@@ -143,7 +179,6 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    author: newAuthor,
                     content: newContent,
                 }),
             })
@@ -169,12 +204,12 @@
             for (const post of posts) {
                 const postDiv = document.createElement('div');
                 postDiv.innerHTML = `
-                    <h3>Author: ${post.author}</h3>
-                    <p>Content: ${post.content}</p>
-                    <p>Date: ${post.created_at}</p>
-                    <p style="font-size: x-small">id: ${post.id}</p>
-                    <button onclick="deletePost(${post.id})">Delete</button>
-                `;
+                <h3>Author: ${post.author}</h3>
+                <p>Content: ${post.content}</p>
+                <p>Date: ${post.created_at}</p>
+                <p style="font-size: x-small">id: ${post.id}</p>
+                <button onclick="deletePost(${post.id})">Delete</button>
+            `;
                 postDiv.style.border = "3px solid black"
                 postDiv.style.margin = "5px"
                 postDiv.style.padding = "10px"
@@ -194,7 +229,121 @@
                     alert('Blog post deleted successfully');
                     location.reload();
                 } else {
-                    alert('Error deleting blog post');
+                    alert('Unauthorized');
+                }
+            });
+    }
+
+    // New function for user registration
+    function register() {
+        const regUsername = document.getElementById('regUsername').value;
+        const regPassword = document.getElementById('regPassword').value;
+
+        fetch('/api/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: regUsername,
+                password: regPassword,
+            }),
+        })
+            .then(response => {
+                if (response.ok) {
+                    alert('Registration successful. You can now log in.');
+                } else {
+                    alert('Registration failed. Please check your inputs.');
+                }
+            });
+    }
+
+    function login() {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        console.log('Attempting login with:', username, password);
+
+        fetch('/api/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: username,
+                password: password,
+            }),
+        })
+            .then(response => response.json())  // Add this line to parse the response as JSON
+            .then(data => {
+                console.log('Login data:', data);  // Log the response data for further inspection
+                if (data.message === 'Login successful') {
+                    alert('Login successful');
+                    location.reload();
+                } else {
+                    alert('Login failed. Check your credentials.');
+                }
+            })
+            .catch(error => {
+                console.error('Login error:', error);  // Log any errors that occur during the fetch
+                alert('An error occurred during login. Please try again.');
+            });
+    }
+
+    // New function for user logout
+    function logout() {
+        fetch('/api/logout', {
+            method: 'POST',
+        })
+            .then(response => {
+                if (response.ok) {
+                    alert('Logout successful');
+                    location.reload();
+                } else {
+                    alert('Logout failed.');
+                }
+            });
+    }
+
+    function createPost(content) {
+        console.log('tvoje máma')
+        fetch('/api/blog', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                content: content,
+            }),
+        })
+            .then(response => {
+                if (response.status !== 201) { // Check for a successful HTTP status code (e.g., 201 Created)
+                    throw new Error('Error creating blog post');
+                }
+                return response.json();
+            })
+            .then(data => {
+                alert('Blog post created with ID: ' + data.id);
+                location.reload();
+            })
+
+    }
+
+    // Update an existing blog post
+    function updatePost(postId, newContent) {
+        fetch(`/api/blog/${postId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                content: newContent,
+            }),
+        })
+            .then(response => {
+                if (response.ok) {
+                    alert('Blog post updated successfully');
+                    location.reload();
                 }
             });
     }
