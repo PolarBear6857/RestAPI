@@ -1,12 +1,13 @@
 from flask import Flask, jsonify, request, render_template, session, url_for
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blog.db'
-app.secret_key = 'VCNXTruxHj'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///blog.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.secret_key = os.environ.get('SECRET_KEY', 'VCNXTruxHj')
 db = SQLAlchemy(app)
 
 
@@ -18,9 +19,10 @@ def generate_blog_post_links(blog_id, is_author):
 
     if is_author:
         links.append({'rel': 'update', 'href': url_for('partial_update_blog_post', blog_id=blog_id, _external=True)})
-        links.append({'rel': 'delete', 'href': url_for('delete_blog_post', post_id=blog_id, _external=True)})
+        links.append({'rel': 'delete', 'href': url_for('delete_blog_post', blog_id=blog_id, _external=True)})
 
     return links
+
 
 
 # Function to generate HATEOAS links for the entire blog
@@ -47,7 +49,7 @@ class User(db.Model):
     password = db.Column(db.String(255), nullable=False)
 
     def set_password(self, password):
-        self.password = generate_password_hash(password)
+        self.password = generate_password_hash(password, method='pbkdf2:sha256')
 
     def check_password(self, password):
         return check_password_hash(self.password, password)
@@ -64,7 +66,6 @@ class BlogPost(db.Model):
     user = db.relationship('User', backref=db.backref('blog_posts', lazy=True))
 
 
-# New endpoint for user registration
 @app.route('/api/register', methods=['POST'])
 def register_user():
     data = request.get_json()
@@ -123,9 +124,8 @@ def login_user():
 
 
 # New endpoint for user logout
-@app.route('/api/logout', methods=['POST'])
+@app.route('/api/logout', methods=['GET'])
 def logout_user():
-    # Check if a user is logged in before logging out
     if 'user_id' not in session:
         return jsonify({'error': 'Not logged in'}), 400
 
@@ -198,25 +198,24 @@ def get_blog_post(blog_id):
         return jsonify({'error': 'Blog post not found'}), 404
 
 
-@app.route('/api/blog/<int:post_id>', methods=['DELETE'])
-def delete_blog_post(post_id):
-    post = BlogPost.query.get(post_id)
+@app.route('/api/blog/<int:blog_id>', methods=['DELETE'])
+def delete_blog_post(blog_id):
+    post = BlogPost.query.get(blog_id)
 
-    # Zkontrolujte, zda přihlášený uživatel je vlastníkem příspěvku
-    if post.user_id != session['user_id']:
+    if not post:
+        return jsonify({'error': 'Blog post not found'}), 404
+
+    if post.user_id != session.get('user_id'):
         return jsonify({'error': 'Unauthorized'}), 403
 
-    # Pokračujte ve smazání příspěvku
     db.session.delete(post)
     db.session.commit()
 
     return jsonify({'message': 'Blog post deleted successfully'})
 
 
-# New endpoint for updating a blog post
 @app.route('/api/blog/<int:blog_id>', methods=['PATCH'])
 def partial_update_blog_post(blog_id):
-    # Check if a user is logged in
     if 'user_id' not in session:
         return jsonify({'error': 'Not logged in'}), 401
 
@@ -224,8 +223,7 @@ def partial_update_blog_post(blog_id):
     if not post:
         return jsonify({'error': 'Blog post not found'}), 404
 
-    # Check if the logged-in user is the author of the blog post
-    if post.user_id != session['user_id']:
+    if post.user_id != session.get('user_id'):
         return jsonify({'error': 'You are not the author of this blog post'}), 403
 
     data = request.get_json()

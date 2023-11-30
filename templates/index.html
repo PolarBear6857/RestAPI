@@ -122,104 +122,55 @@
 
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Check if a user is already logged in
+    // Check if a user is already logged in
+    function checkLogin() {
         fetch('/api/check_login')
             .then(response => response.json())
             .then(data => {
                 if (data.user_id) {
                     document.getElementById('loggedInUser').innerText = 'Logged in as: ' + data.username;
                     document.getElementById('loginForm').style.display = 'none';
-                    document.getElementById('logoutLink').style.display = 'inline';
+                    document.getElementById('logoutLink').style.display = 'block';
                     document.getElementById('createPostForm').style.display = 'block';
                     document.getElementById('updatePostForm').style.display = 'block';
                 } else {
+                    document.getElementById('loggedInUser').innerText = '';
                     document.getElementById('loginForm').style.display = 'block';
                     document.getElementById('logoutLink').style.display = 'none';
                     document.getElementById('createPostForm').style.display = 'none';
                     document.getElementById('updatePostForm').style.display = 'none';
                 }
             });
+    }
 
-        // Načtení všech blog postů při načtení stránky
+    document.addEventListener('DOMContentLoaded', function () {
+        checkLogin();
+        fetchBlogPosts();
+    });
+
+    function fetchBlogPosts() {
         fetch('/api/blog')
             .then(response => response.json())
             .then(data => displayBlogPosts(data.posts));
+    }
 
-        // Odeslání formuláře pro vytvoření nového blog postu
-        document.getElementById('createPostForm').addEventListener('submit', function (event) {
-            event.preventDefault();
-            const content = document.getElementById('content').value;
-
-            fetch('/api/blog', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    content: content,
-                }),
-            })
-                .then(response => response.json())
-                .then(data => {
-                    alert('Blog post created with ID: ' + data.id);
-                    location.reload();
-                });
-        });
-
-        // Odeslání formuláře pro částečný update blog postu
-        document.getElementById('updatePostForm').addEventListener('submit', function (event) {
-            event.preventDefault();
-            const postId = document.getElementById('updateId').value;
-            const newContent = document.getElementById('newContent').value;
-
-            fetch(`/api/blog/${postId}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    content: newContent,
-                }),
-            })
-                .then(response => {
-                    if (response.ok) {
-                        alert('Blog post updated successfully');
-                        location.reload();
-                    } else {
-                        alert('Error updating blog post');
-                    }
-                });
-        });
-    });
-
-    // Funkce pro zobrazení blog postů na stránce
     function displayBlogPosts(posts) {
         const blogPostsContainer = document.getElementById('blogPosts');
-        if (posts.length === 0) {
-            const emptyPostParagraph = document.createElement('p')
-            emptyPostParagraph.innerHTML = "(Blog neobsahuje žádné příspěvky)"
-            blogPostsContainer.appendChild(emptyPostParagraph)
-        } else {
-            for (const post of posts) {
-                const postDiv = document.createElement('div');
-                postDiv.innerHTML = `
+        blogPostsContainer.innerHTML = ''; // Clear existing posts
+        posts.forEach(post => {
+            const postDiv = document.createElement('div');
+            postDiv.className = 'post';
+            postDiv.innerHTML = `
                 <h3>Author: ${post.author}</h3>
                 <p>Content: ${post.content}</p>
                 <p>Date: ${post.created_at}</p>
                 <p style="font-size: x-small">id: ${post.id}</p>
                 <button onclick="deletePost(${post.id})">Delete</button>
             `;
-                postDiv.style.border = "3px solid black"
-                postDiv.style.margin = "5px"
-                postDiv.style.padding = "10px"
-                postDiv.style.borderRadius = "10px"
-                blogPostsContainer.appendChild(postDiv);
-            }
-        }
+            blogPostsContainer.appendChild(postDiv);
+        });
     }
 
-    // Funkce pro smazání blog postu
     function deletePost(postId) {
         fetch(`/api/blog/${postId}`, {
             method: 'DELETE',
@@ -234,24 +185,19 @@
             });
     }
 
-    // New function for user registration
     function register() {
-        const regUsername = document.getElementById('regUsername').value;
-        const regPassword = document.getElementById('regPassword').value;
+        const username = document.getElementById('regUsername').value;
+        const password = document.getElementById('regPassword').value;
 
         fetch('/api/register', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                username: regUsername,
-                password: regPassword,
-            }),
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username, password})
         })
             .then(response => {
                 if (response.ok) {
                     alert('Registration successful. You can now log in.');
+                    checkLogin();
                 } else {
                     alert('Registration failed. Please check your inputs.');
                 }
@@ -262,91 +208,84 @@
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
 
-        console.log('Attempting login with:', username, password);
-
         fetch('/api/login', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                username: username,
-                password: password,
-            }),
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username, password})
         })
-            .then(response => response.json())  // Add this line to parse the response as JSON
+            .then(response => response.json())
             .then(data => {
-                console.log('Login data:', data);  // Log the response data for further inspection
                 if (data.message === 'Login successful') {
                     alert('Login successful');
-                    location.reload();
+                    checkLogin();
+                    fetchBlogPosts();
                 } else {
                     alert('Login failed. Check your credentials.');
                 }
-            })
-            .catch(error => {
-                console.error('Login error:', error);  // Log any errors that occur during the fetch
-                alert('An error occurred during login. Please try again.');
             });
     }
 
-    // New function for user logout
     function logout() {
         fetch('/api/logout', {
-            method: 'POST',
+            method: 'GET'
         })
             .then(response => {
                 if (response.ok) {
                     alert('Logout successful');
-                    location.reload();
+                    checkLogin();
                 } else {
                     alert('Logout failed.');
                 }
             });
     }
 
+
+    document.getElementById('createPostForm').addEventListener('submit', function (event) {
+        event.preventDefault();
+        const content = document.getElementById('content').value;
+        createPost(content);
+    });
+
     function createPost(content) {
-        console.log('tvoje máma')
         fetch('/api/blog', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                content: content,
-            }),
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({content})
         })
-            .then(response => {
-                if (response.status !== 201) { // Check for a successful HTTP status code (e.g., 201 Created)
-                    throw new Error('Error creating blog post');
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                alert('Blog post created with ID: ' + data.id);
-                location.reload();
-            })
-
+                if (data.id) {
+                    alert('Blog post created with ID: ' + data.id);
+                    fetchBlogPosts();
+                } else {
+                    alert('Error creating blog post');
+                }
+            });
     }
 
-    // Update an existing blog post
+    document.getElementById('updatePostForm').addEventListener('submit', function (event) {
+        event.preventDefault();
+        const postId = document.getElementById('updateId').value;
+        const newContent = document.getElementById('newContent').value;
+        updatePost(postId, newContent);
+    });
+
     function updatePost(postId, newContent) {
         fetch(`/api/blog/${postId}`, {
             method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                content: newContent,
-            }),
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({content: newContent})
         })
             .then(response => {
                 if (response.ok) {
                     alert('Blog post updated successfully');
-                    location.reload();
+                    fetchBlogPosts();
+                } else {
+                    alert('Error updating blog post');
                 }
             });
     }
 </script>
+
 </body>
 </html>
