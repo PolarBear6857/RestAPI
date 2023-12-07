@@ -148,13 +148,8 @@ def create_blog_post():
             return jsonify({'error': 'Content is required for a blog post'}), 400
 
         new_post = BlogPost(author=User.query.get(user_id).username, content=content, user_id=user_id)
-        try:
-            db.session.add(new_post)
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            print(f"Error committing to the database: {str(e)}")
-            return jsonify({'error': 'An unexpected error occurred while saving to the database'}), 500
+        db.session.add(new_post)
+        db.session.commit()
 
         # Debugging Output: Print HATEOAS links
         post_links = generate_blog_post_links(new_post.id, is_author=(new_post.user_id == user_id))
@@ -164,7 +159,8 @@ def create_blog_post():
 
         return jsonify({'id': new_post.id, 'message': 'Blog post created successfully'})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"Error creating blog post: {str(e)}")
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 
 # Endpoint for getting all blog posts with HATEOAS links
