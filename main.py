@@ -134,13 +134,12 @@ def logout_user():
 
 @app.route('/api/blog', methods=['POST'])
 def create_blog_post():
-    global data
     try:
         data = request.json
         content = data.get('content')
     except Exception as e:
         print(f"Error creating blog post: {str(e)}")
-        return jsonify({'error': f'An unexpected error occurred: {data}'}), 500
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
     # Get the user_id from the session or any other way you manage sessions
     user_id = session.get('user_id')
