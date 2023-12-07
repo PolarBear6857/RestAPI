@@ -136,6 +136,7 @@ def logout_user():
 def create_blog_post():
     try:
         data = request.json
+        print(data)
         content = data.get('content')
     except Exception as e:
         print(f"Error creating blog post: {str(e)}")
