@@ -135,7 +135,7 @@ def logout_user():
 @app.route('/api/blog', methods=['POST'])
 def create_blog_post():
     try:
-        data = request.get_json()
+        data = request.json
         content = data.get('content')
     except Exception as e:
         print(f"Error creating blog post: {str(e)}")
