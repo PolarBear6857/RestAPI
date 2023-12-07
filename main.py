@@ -24,7 +24,6 @@ def generate_blog_post_links(blog_id, is_author):
     return links
 
 
-
 # Function to generate HATEOAS links for the entire blog
 def generate_blog_links():
     links = [
@@ -149,8 +148,13 @@ def create_blog_post():
             return jsonify({'error': 'Content is required for a blog post'}), 400
 
         new_post = BlogPost(author=User.query.get(user_id).username, content=content, user_id=user_id)
-        db.session.add(new_post)
-        db.session.commit()
+        try:
+            db.session.add(new_post)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error committing to the database: {str(e)}")
+            return jsonify({'error': 'An unexpected error occurred while saving to the database'}), 500
 
         # Debugging Output: Print HATEOAS links
         post_links = generate_blog_post_links(new_post.id, is_author=(new_post.user_id == user_id))
