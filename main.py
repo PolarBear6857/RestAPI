@@ -137,30 +137,30 @@ def create_blog_post():
     try:
         data = request.get_json()
         content = data.get('content')
-
-        # Get the user_id from the session or any other way you manage sessions
-        user_id = session.get('user_id')
-
-        if not user_id:
-            return jsonify({'error': 'User not logged in'}), 401
-
-        if content is None:
-            return jsonify({'error': 'Content is required for a blog post'}), 400
-
-        new_post = BlogPost(author=User.query.get(user_id).username, content=content, user_id=user_id)
-        db.session.add(new_post)
-        db.session.commit()
-
-        # Debugging Output: Print HATEOAS links
-        post_links = generate_blog_post_links(new_post.id, is_author=(new_post.user_id == user_id))
-        blog_links = generate_blog_links()
-        print(f'HATEOAS Links for the created blog post (ID: {new_post.id}): {post_links}')
-        print(f'HATEOAS Links for the entire blog: {blog_links}')
-
-        return jsonify({'id': new_post.id, 'message': 'Blog post created successfully'})
     except Exception as e:
         print(f"Error creating blog post: {str(e)}")
         return jsonify({'error': 'An unexpected error occurred'}), 500
+
+    # Get the user_id from the session or any other way you manage sessions
+    user_id = session.get('user_id')
+
+    if not user_id:
+        return jsonify({'error': 'User not logged in'}), 401
+
+    if content is None:
+        return jsonify({'error': 'Content is required for a blog post'}), 400
+
+    new_post = BlogPost(author=User.query.get(user_id).username, content=content, user_id=user_id)
+    db.session.add(new_post)
+    db.session.commit()
+
+    # Debugging Output: Print HATEOAS links
+    post_links = generate_blog_post_links(new_post.id, is_author=(new_post.user_id == user_id))
+    blog_links = generate_blog_links()
+    print(f'HATEOAS Links for the created blog post (ID: {new_post.id}): {post_links}')
+    print(f'HATEOAS Links for the entire blog: {blog_links}')
+
+    return jsonify({'id': new_post.id, 'message': 'Blog post created successfully'})
 
 
 # Endpoint for getting all blog posts with HATEOAS links
